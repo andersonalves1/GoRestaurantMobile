@@ -4,15 +4,15 @@ import React, {
   useCallback,
   useMemo,
   useLayoutEffect,
-} from 'react';
-import { Image } from 'react-native';
+} from 'react'
+import { Image } from 'react-native'
 
-import Icon from 'react-native-vector-icons/Feather';
-import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import formatValue from '../../utils/formatValue';
+import Icon from 'react-native-vector-icons/Feather'
+import MaterialIcon from 'react-native-vector-icons/MaterialIcons'
+import { useNavigation, useRoute } from '@react-navigation/native'
+import formatValue from '../../utils/formatValue'
 
-import api from '../../services/api';
+import api from '../../services/api'
 
 import {
   Container,
@@ -37,84 +37,139 @@ import {
   FinishOrderButton,
   ButtonText,
   IconContainer,
-} from './styles';
+} from './styles'
 
 interface Params {
-  id: number;
+  id: number
 }
 
 interface Extra {
-  id: number;
-  name: string;
-  value: number;
-  quantity: number;
+  id: number
+  name: string
+  value: number
+  quantity: number
 }
 
 interface Food {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string;
-  formattedPrice: string;
-  extras: Extra[];
+  id: number
+  name: string
+  description: string
+  price: number
+  image_url: string
+  formattedPrice: string
+  extras: Extra[]
 }
 
 const FoodDetails: React.FC = () => {
-  const [food, setFood] = useState({} as Food);
-  const [extras, setExtras] = useState<Extra[]>([]);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [foodQuantity, setFoodQuantity] = useState(1);
+  const [food, setFood] = useState({} as Food)
+  const [extras, setExtras] = useState<Extra[]>([])
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [foodQuantity, setFoodQuantity] = useState(1)
 
-  const navigation = useNavigation();
-  const route = useRoute();
+  const navigation = useNavigation()
+  const route = useRoute()
 
-  const routeParams = route.params as Params;
+  const routeParams = route.params as Params
 
   useEffect(() => {
     async function loadFood(): Promise<void> {
-      // Load a specific food with extras based on routeParams id
+      const response = await api.get(`/foods/${routeParams.id}`)
+
+      const foodData = {
+        ...response.data,
+        formattedPrice: formatValue(response.data.price),
+      } as Food
+
+      const extrasData = response.data.extras.map(
+        (extra: Omit<Extra, 'quantity'>) => ({
+          ...extra,
+          quantity: 0,
+        }),
+      )
+
+      setFood(foodData)
+      setExtras(extrasData)
     }
 
-    loadFood();
-  }, [routeParams]);
+    loadFood()
+  }, [routeParams])
 
   function handleIncrementExtra(id: number): void {
-    // Increment extra quantity
+    setExtras(state => {
+      return state.map(extra => {
+        if (extra.id === id) {
+          return {
+            ...extra,
+            quantity: extra.quantity + 1,
+          }
+        }
+
+        return extra
+      })
+    })
   }
 
   function handleDecrementExtra(id: number): void {
-    // Decrement extra quantity
+    setExtras(state => {
+      return state.map(extra => {
+        if (extra.id === id && extra.quantity !== 0) {
+          return {
+            ...extra,
+            quantity: extra.quantity - 1,
+          }
+        }
+
+        return extra
+      })
+    })
   }
 
   function handleIncrementFood(): void {
-    // Increment food quantity
+    setFoodQuantity(state => state + 1)
   }
 
   function handleDecrementFood(): void {
-    // Decrement food quantity
+    setFoodQuantity(state => (state === 1 ? 1 : state - 1))
   }
 
-  const toggleFavorite = useCallback(() => {
-    // Toggle if food is favorite or not
-  }, [isFavorite, food]);
+  const toggleFavorite = useCallback(async () => {
+    if (isFavorite) {
+      await api.delete(`/favorites/${food.id}`)
+    } else {
+      await api.post('/favorites', food)
+    }
+    setIsFavorite(state => !state)
+  }, [isFavorite, food])
 
   const cartTotal = useMemo(() => {
-    // Calculate cartTotal
-  }, [extras, food, foodQuantity]);
+    const extraTotalPrice = extras.reduce((increment, extra) => {
+      return increment + extra.quantity * extra.value
+    }, 0)
+
+    const totalPrice = (extraTotalPrice + food.price) * foodQuantity
+
+    return formatValue(totalPrice)
+  }, [extras, food, foodQuantity])
 
   async function handleFinishOrder(): Promise<void> {
-    // Finish the order and save on the API
+    const data = {
+      ...food,
+      ...extras,
+      product_id: food.id,
+    }
+
+    delete data.id
+
+    await api.post('/orders', data)
+    navigation.navigate('DashboardStack')
   }
 
-  // Calculate the correct icon name
   const favoriteIconName = useMemo(
     () => (isFavorite ? 'favorite' : 'favorite-border'),
     [isFavorite],
-  );
+  )
 
   useLayoutEffect(() => {
-    // Add the favorite icon on the right of the header bar
     navigation.setOptions({
       headerRight: () => (
         <MaterialIcon
@@ -124,8 +179,8 @@ const FoodDetails: React.FC = () => {
           onPress={() => toggleFavorite()}
         />
       ),
-    });
-  }, [navigation, favoriteIconName, toggleFavorite]);
+    })
+  }, [navigation, favoriteIconName, toggleFavorite])
 
   return (
     <Container>
@@ -210,7 +265,7 @@ const FoodDetails: React.FC = () => {
         </TotalContainer>
       </ScrollContainer>
     </Container>
-  );
-};
+  )
+}
 
-export default FoodDetails;
+export default FoodDetails

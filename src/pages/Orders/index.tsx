@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Image } from 'react-native';
+import React, { useEffect, useState } from 'react'
+import { Image } from 'react-native'
 
-import api from '../../services/api';
-import formatValue from '../../utils/formatValue';
+import api from '../../services/api'
+import formatValue from '../../utils/formatValue'
 
 import {
   Container,
@@ -16,27 +16,34 @@ import {
   FoodTitle,
   FoodDescription,
   FoodPricing,
-} from './styles';
+} from './styles'
 
 interface Food {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  formattedPrice: string;
-  thumbnail_url: string;
+  id: number
+  name: string
+  description: string
+  price: number
+  formattedValue: number
+  thumbnail_url: string
 }
 
 const Orders: React.FC = () => {
-  const [orders, setOrders] = useState<Food[]>([]);
+  const [orders, setOrders] = useState<Food[]>([])
 
   useEffect(() => {
     async function loadOrders(): Promise<void> {
-      // Load orders from API
+      const response = await api.get('/orders')
+
+      const data = response.data.map((food: Food) => ({
+        ...food,
+        formattedValue: formatValue(food.price),
+      }))
+
+      setOrders(data)
     }
 
-    loadOrders();
-  }, []);
+    loadOrders()
+  }, [])
 
   return (
     <Container>
@@ -59,14 +66,14 @@ const Orders: React.FC = () => {
               <FoodContent>
                 <FoodTitle>{item.name}</FoodTitle>
                 <FoodDescription>{item.description}</FoodDescription>
-                <FoodPricing>{item.formattedPrice}</FoodPricing>
+                <FoodPricing>{item.formattedValue}</FoodPricing>
               </FoodContent>
             </Food>
           )}
         />
       </FoodsContainer>
     </Container>
-  );
-};
+  )
+}
 
-export default Orders;
+export default Orders
